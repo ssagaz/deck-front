@@ -9,6 +9,7 @@ export interface IProduct {
   name: string;
   description: string;
   value: number;
+  enable_display: boolean;
   createdAt: string;
   updatedAt: string;
 }

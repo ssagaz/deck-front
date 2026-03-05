@@ -138,7 +138,7 @@ export class CreateOrderComponent implements OnInit {
   loadProducts() {
     this.orderService.getProducts().subscribe({
       next: (data) => {
-        this.products = data;
+        this.products = data.filter(p => p.enable_display);
         this.products.forEach(p => this.quantities[p.id] = 0);
       },
       error: (err) => this.showAlert('Erro ao carregar produtos', 'error')

@@ -48,9 +48,27 @@ import { IProduct, ICreateProduct } from './products.interface';
                 <p class="text-gray-600 text-sm">{{ product.description }}</p>
                 <p class="text-green-600 font-bold">{{ product.value | currency : 'R$' }}</p>
               </div>
-              <button (click)="deleteProduct(product.id)" class="text-red-600 hover:text-red-800">
-                Delete
-              </button>
+              <div class="flex flex-col items-end gap-6">
+                <div class="flex items-center gap-2">
+                  <span class="text-xs text-gray-500">{{ product.enable_display ? 'Habilitado' : 'Desabilitado' }}</span>
+                  <button
+                    type="button"
+                    (click)="toggleEnabled(product)"
+                    [class]="product.enable_display
+                      ? 'relative inline-flex h-6 w-11 items-center rounded-full bg-blue-600 transition-colors focus:outline-none'
+                      : 'relative inline-flex h-6 w-11 items-center rounded-full bg-gray-300 transition-colors focus:outline-none'"
+                  >
+                    <span
+                      [class]="product.enable_display
+                        ? 'inline-block h-4 w-4 transform rounded-full bg-white transition-transform translate-x-6'
+                        : 'inline-block h-4 w-4 transform rounded-full bg-white transition-transform translate-x-1'"
+                    ></span>
+                  </button>
+                </div>
+                <button (click)="deleteProduct(product.id)" class="text-red-600 hover:text-red-800">
+                  Delete
+                </button>
+              </div>
             </div>
           </div>
         }
@@ -94,6 +112,16 @@ export class ProductsComponent implements OnInit {
         this.products = this.products.filter(p => p.id !== id);
       },
       error: (err) => console.error('Error deleting product', err)
+    });
+  }
+
+  toggleEnabled(product: IProduct) {
+    const updated = { ...product, enable_display: !product.enable_display };
+    this.productService.updateProduct(product.id, { enable_display: updated.enable_display }).subscribe({
+      next: () => {
+        product.enable_display = updated.enable_display;
+      },
+      error: (err: unknown) => console.error('Error updating product', err)
     });
   }
 
