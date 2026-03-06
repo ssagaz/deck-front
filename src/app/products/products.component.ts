@@ -66,7 +66,7 @@ import { IProduct, ICreateProduct } from './products.interface';
                   </button>
                 </div>
                 <button (click)="deleteProduct(product.id)" class="text-red-600 hover:text-red-800">
-                  Delete
+                  Excluir
                 </button>
               </div>
             </div>

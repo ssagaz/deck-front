@@ -62,6 +62,11 @@
         },
         "serve": {
           "builder": "@angular-devkit/build-angular:dev-server",
+           "options": {
+            "allowedHosts": [
+              "dauntingly-sluicelike-caryn.ngrok-free.dev"
+            ]
+          },
           "configurations": {
             "production": {
               "buildTarget": "deckesfihas:build:production"
