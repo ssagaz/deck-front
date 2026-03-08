@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { ICreateOrder, IOrder, OrderStatus } from '../orders/order.interface';
@@ -10,8 +10,7 @@ import { IProduct } from '../products/products.interface';
 export class OrderService {
   private ordersUrl = 'http://localhost:3001/orders';
   private productsUrl = 'http://localhost:3001/products';
-
-  constructor(private http: HttpClient) {}
+  private http = inject(HttpClient);
 
   createOrder(order: ICreateOrder): Observable<IOrder> {
     return this.http.post<IOrder>(this.ordersUrl, order);

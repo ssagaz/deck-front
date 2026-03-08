@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule, CurrencyPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -111,6 +111,8 @@ import { ICreateOrder } from '../orders/order.interface';
   `
 })
 export class CreateOrderComponent implements OnInit {
+  private orderService = inject(OrderService);
+  private router = inject(Router);
  
   products: IProduct[] = [];
  
@@ -125,11 +127,6 @@ export class CreateOrderComponent implements OnInit {
   
   alertMessage = '';
   alertType: 'success' | 'error' = 'success';
-
-  constructor(
-    private orderService: OrderService,
-    private router: Router
-  ) {}
 
   ngOnInit() {
     this.loadProducts();

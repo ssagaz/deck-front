@@ -1,6 +1,7 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule, CurrencyPipe } from '@angular/common';
 import { OrderService } from '../services/order.service';
+import { PrinterService } from '../services/printer.service';
 import { IOrder, OrderStatus } from './order.interface';
 
 @Component({
@@ -8,8 +9,14 @@ import { IOrder, OrderStatus } from './order.interface';
   standalone: true,
   imports: [CommonModule, CurrencyPipe],
   template: `
-    <div class="p-4 bg-gray-100 min-h-screen pb-20">
-      <h2 class="text-2xl font-bold mb-6 text-gray-800">Quadro de Pedidos</h2>
+    <div class="p-4">
+      <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl font-bold text-gray-800">Quadro de Pedidos</h2>
+        <div *ngIf="isPrinterConnected" class="flex items-center gap-1.5 px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold">
+          <div class="w-2 h-2 bg-green-500 rounded-full"></div>
+          Impressora ON
+        </div>
+      </div>
 
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         @for (order of orders; track order.id) {
@@ -41,7 +48,7 @@ import { IOrder, OrderStatus } from './order.interface';
             </div>
 
             <!-- Footer -->
-            <div class="p-4 bg-gray-50 border-t border-gray-100">
+            <div class="p-4 bg-gray-50 border-t border-gray-100 mt-auto">
               <div class="flex items-start gap-2 mb-3">
                 <svg class="w-4 h-4 text-gray-400 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
@@ -50,10 +57,21 @@ import { IOrder, OrderStatus } from './order.interface';
                 <p class="text-xs text-gray-600 leading-relaxed">{{ order.customerAddress }}</p>
               </div>
               
-              <div class="flex justify-between items-center">
+              <div class="flex justify-between items-center mb-4">
                 <span class="text-sm font-bold text-gray-900">Total</span>
                 <span class="text-lg font-bold text-green-600">{{ order.totalValue | currency:'R$' }}</span>
               </div>
+
+              <button
+                (click)="printOrder(order)"
+                [disabled]="!isPrinterConnected"
+                class="w-full bg-green-600 text-white py-3 px-4 rounded-md font-medium hover:bg-green-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                </svg>
+                Imprimir
+              </button>
             </div>
           </div>
         } @empty {
@@ -69,12 +87,14 @@ import { IOrder, OrderStatus } from './order.interface';
   `
 })
 export class OrderBoardComponent implements OnInit {
+  private orderService = inject(OrderService);
+  private printerService = inject(PrinterService);
   orders: IOrder[] = [];
-
-  constructor(private orderService: OrderService) {}
+  isPrinterConnected = false;
 
   ngOnInit() {
     this.loadData();
+    this.isPrinterConnected = this.printerService.getConnectedStatus();
   }
 
   loadData() {
@@ -86,6 +106,15 @@ export class OrderBoardComponent implements OnInit {
       },
       error: (err) => console.error('Error loading board data', err)
     });
+  }
+
+  async printOrder(order: IOrder) {
+    try {
+      await this.printerService.printOrder(order);
+    } catch (error) {
+      console.error('Print failed:', error);
+      alert('Falha na impressão. Verifique a conexão do Bluetooth.');
+    }
   }
 
   translateStatus(status: OrderStatus): string {

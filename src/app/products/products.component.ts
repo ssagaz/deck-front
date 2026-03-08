@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule, CurrencyPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ProductService } from '../services/product.service';
@@ -77,11 +77,10 @@ import { IProduct, ICreateProduct } from './products.interface';
   `
 })
 export class ProductsComponent implements OnInit {
+  private productService = inject(ProductService);
   
   products: IProduct[] = [];
   newProduct: ICreateProduct = { name: '', description: '', value: 0 };
-
-  constructor(private productService: ProductService) { }
 
   ngOnInit() {
     this.loadProducts();
