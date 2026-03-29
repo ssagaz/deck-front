@@ -18,10 +18,20 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v3
 
+      - name: Save certificate from secret
+        run: |
+          mkdir -p certs
+          echo "${{ secrets.P12_BASE64 }}" | base64 --decode > certs/certificate.p12
+
+      - name: Save provisioning profile from secret
+        run: |
+          mkdir -p profiles
+          echo "${{ secrets.MOBILEPROVISION_BASE64 }}" | base64 --decode > profiles/MyXL-UniversalDist.mobileprovision
+
       - name: Set up keychain
         run: |
           security create-keychain -p "" build.keychain
-          security import ./certs/certificate.p12 -k build.keychain -P "$P12_PASSWORD" -T /usr/bin/codesign
+          security import ./certs/certificate.p12 -k build.keychain -P "${{ secrets.P12_PASSWORD }}" -T /usr/bin/codesign
           security list-keychains -s build.keychain
           security default-keychain -s build.keychain
           security unlock-keychain -p "" build.keychain
@@ -57,19 +67,17 @@ jobs:
           VERSION=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" "$APP_NAME.xcodeproj/Info.plist")
           BUILD=$(/usr/libexec/PlistBuddy -c "Print CFBundleVersion" "$APP_NAME.xcodeproj/Info.plist")
           mv build/$APP_NAME.ipa build/${APP_NAME}_v${VERSION}.${BUILD}.ipa
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
-          echo "BUILD=$BUILD" >> $GITHUB_ENV
 
       - name: Prepare .ipa for TrollStore
         run: |
           mkdir -p build/Payload
-          cp -R build/${APP_NAME}_v${{ env.VERSION }}.${{ env.BUILD }}.ipa build/Payload/$APP_NAME.app
+          cp -R build/${APP_NAME}_v${VERSION}.${BUILD}.ipa build/Payload/$APP_NAME.app
           cd build
-          zip -r ${APP_NAME}_v${{ env.VERSION }}.${{ env.BUILD }}.ipa Payload
+          zip -r ${APP_NAME}_v${VERSION}.${BUILD}.ipa Payload
           cd ..
 
       - name: Upload .ipa
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.APP_NAME }}_Enterprise_TrollStore
-          path: build/${APP_NAME}_v${{ env.VERSION }}.${{ env.BUILD }}.ipa
+          name: ${APP_NAME}_Enterprise_TrollStore.ipa
+          path: build/${APP_NAME}_v${VERSION}.${BUILD}.ipa
