@@ -1,17 +1,11 @@
+name: Build iOS Enterprise App for TrollStore
 
-- name: Save certificate from secret
-  run: |
-    mkdir -p certs
-    # Remove quebras de linha e decodifica corretamente
-    echo "${{ secrets.P12_BASE64 }}" | tr -d '\r\n' | base64 --decode > certs/certificate.p12
-- name: Build iOS Enterprise App for TrollStore
-
-- on:
+on:
   push:
     branches: [ master ]
   workflow_dispatch:
 
-- jobs:
+jobs:
   build:
     runs-on: macos-latest
     env:
@@ -27,12 +21,12 @@
       - name: Save certificate from secret
         run: |
           mkdir -p certs
-          echo "${{ secrets.P12_BASE64 }}" | base64 --decode > certs/certificate.p12
+          echo "${{ secrets.P12_BASE64 }}" | tr -d '\r\n' | base64 --decode > certs/certificate.p12
 
       - name: Save provisioning profile from secret
         run: |
           mkdir -p profiles
-          echo "${{ secrets.MOBILEPROVISION_BASE64 }}" | base64 --decode > profiles/MyXL-UniversalDist.mobileprovision
+          echo "${{ secrets.MOBILEPROVISION_BASE64 }}" | tr -d '\r\n' | base64 --decode > profiles/MyXL-UniversalDist.mobileprovision
 
       - name: Set up keychain
         run: |
