@@ -57,17 +57,19 @@ jobs:
           VERSION=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" "$APP_NAME.xcodeproj/Info.plist")
           BUILD=$(/usr/libexec/PlistBuddy -c "Print CFBundleVersion" "$APP_NAME.xcodeproj/Info.plist")
           mv build/$APP_NAME.ipa build/${APP_NAME}_v${VERSION}.${BUILD}.ipa
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "BUILD=$BUILD" >> $GITHUB_ENV
 
       - name: Prepare .ipa for TrollStore
         run: |
           mkdir -p build/Payload
-          cp build/${APP_NAME}_v${VERSION}.${BUILD}.ipa build/Payload/$APP_NAME.app
+          cp -R build/${APP_NAME}_v${{ env.VERSION }}.${{ env.BUILD }}.ipa build/Payload/$APP_NAME.app
           cd build
-          zip -r ${APP_NAME}_v${VERSION}.${BUILD}.ipa Payload
+          zip -r ${APP_NAME}_v${{ env.VERSION }}.${{ env.BUILD }}.ipa Payload
           cd ..
 
       - name: Upload .ipa
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: ${APP_NAME}_Enterprise_TrollStore.ipa
-          path: build/${APP_NAME}_v${VERSION}.${BUILD}.ipa
+          name: ${{ env.APP_NAME }}_Enterprise_TrollStore
+          path: build/${APP_NAME}_v${{ env.VERSION }}.${{ env.BUILD }}.ipa
