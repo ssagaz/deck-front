@@ -1,0 +1,60 @@
+name: Build iOS IPA
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+  workflow_dispatch:
+
+jobs:
+  build_ios:
+    runs-on: macos-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: "18"
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Build web assets
+      run: npm run build
+
+    - name: Capacitor sync iOS
+      run: npx cap sync ios
+
+    - name: Install CocoaPods
+      working-directory: ios/App
+      run: |
+        pod install
+
+    - name: Archive IPA
+      working-directory: ios/App
+      run: |
+        xcodebuild clean archive \
+          -workspace App.xcworkspace \
+          -scheme App \
+          -configuration Release \
+          -sdk iphoneos \
+          -archivePath App.xcarchive \
+          -allowProvisioningUpdates
+
+    - name: Export IPA
+      working-directory: ios/App
+      run: |
+        xcodebuild -exportArchive \
+          -archivePath App.xcarchive \
+          -exportOptionsPlist exportOptions.plist \
+          -exportPath ./build
+
+    - name: Upload IPA artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: ios-ipa
+        path: ios/App/build/*.ipa
