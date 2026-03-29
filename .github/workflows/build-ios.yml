@@ -1,4 +1,4 @@
-name: Build iOS IPA
+name: Build iOS Unsigned IPA
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build_ios:
+  build_ios_unsigned:
     runs-on: macos-latest
 
     steps:
@@ -32,29 +32,29 @@ jobs:
     - name: Install CocoaPods
       working-directory: ios/App
       run: |
-        pod install
+        pod install --repo-update
 
-    - name: Archive IPA
+    - name: Build unsigned app
       working-directory: ios/App
       run: |
-        xcodebuild clean archive \
+        xcodebuild clean build \
           -workspace App.xcworkspace \
           -scheme App \
           -configuration Release \
           -sdk iphoneos \
-          -archivePath App.xcarchive \
-          -allowProvisioningUpdates
+          CODE_SIGNING_REQUIRED=NO \
+          CODE_SIGN_IDENTITY="" \
+          CODE_SIGNING_ALLOWED=NO
 
-    - name: Export IPA
-      working-directory: ios/App
+    - name: Create IPA
       run: |
-        xcodebuild -exportArchive \
-          -archivePath App.xcarchive \
-          -exportOptionsPlist exportOptions.plist \
-          -exportPath ./build
+        mkdir -p unsigned/Payload
+        cp -R ios/App/build/Release-iphoneos/App.app unsigned/Payload/
+        cd unsigned
+        zip -r App.ipa Payload
 
-    - name: Upload IPA artifact
+    - name: Upload unsigned IPA
       uses: actions/upload-artifact@v4
       with:
-        name: ios-ipa
-        path: ios/App/build/*.ipa
+        name: ios-unsigned-ipa
+        path: unsigned/App.ipa
