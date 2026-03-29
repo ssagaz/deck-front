@@ -1,42 +1,73 @@
-name: Build iOS via Appflow
+name: Build iOS Enterprise App for TrollStore
 
 on:
   push:
-    branches: ["master"]
+    branches: [ main ]
   workflow_dispatch:
 
 jobs:
-  appflow_ios_build:
-    runs-on: ubuntu-latest
+  build:
+    runs-on: macos-latest
+    env:
+      TEAM_ID: Q6SJUT5K5D
+      BUNDLE_ID: com.xl.MyXL.Giant-staging
+      EXPORT_METHOD: enterprise
+      APP_NAME: MyXL
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout repo
+        uses: actions/checkout@v3
 
-    - name: Install Appflow CLI
-      run: |
-        curl -fsSL https://ionic.io/get-appflow-cli | bash
+      - name: Set up keychain
+        run: |
+          security create-keychain -p "" build.keychain
+          security import ./certs/certificate.p12 -k build.keychain -P "$P12_PASSWORD" -T /usr/bin/codesign
+          security list-keychains -s build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "" build.keychain
 
-    - name: Appflow iOS build
-      run: |
-        export IONIC_TOKEN=${{ secrets.IONIC_TOKEN }}
-        appflow build ios development \
-          --app-id ${{ secrets.APPFLOW_APP_ID }} \
-          --commit=$(git rev-parse HEAD) \
-          --ipa \
-          --ipa-name="appflow_build_${{ github.run_number }}.ipa"
+      - name: Install provisioning profile
+        run: |
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          cp ./profiles/MyXL-UniversalDist.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
 
-    - name: Download build artifact
-      run: |
-        export IONIC_TOKEN=${{ secrets.IONIC_TOKEN }}
-        appflow build download-artifact \
-          --app-id ${{ secrets.APPFLOW_APP_ID }} \
-          --build-id $(appflow build list-builds --app-id ${{ secrets.APPFLOW_APP_ID }} --json | jq -r '.[0].buildId') \
-          --artifact=IPA \
-          --output ./appflow.ipa
+      - name: Build and archive
+        run: |
+          xcodebuild clean -project $APP_NAME.xcodeproj \
+            -scheme $APP_NAME \
+            -configuration Release
+          
+          xcodebuild archive \
+            -project $APP_NAME.xcodeproj \
+            -scheme $APP_NAME \
+            -configuration Release \
+            -archivePath ${{ github.workspace }}/build/$APP_NAME.xcarchive \
+            DEVELOPMENT_TEAM=$TEAM_ID \
+            CODE_SIGN_IDENTITY="iPhone Distribution: XL AXIATA, PT TBK"
 
-    - name: Upload IPA
-      uses: actions/upload-artifact@v4
-      with:
-        name: Appflow IPA
-        path: ./appflow.ipa
+      - name: Export .ipa
+        run: |
+          xcodebuild -exportArchive \
+            -archivePath ${{ github.workspace }}/build/$APP_NAME.xcarchive \
+            -exportPath ${{ github.workspace }}/build \
+            -exportOptionsPlist ./ExportOptions.plist
+
+      - name: Rename .ipa with version
+        run: |
+          VERSION=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" "$APP_NAME.xcodeproj/Info.plist")
+          BUILD=$(/usr/libexec/PlistBuddy -c "Print CFBundleVersion" "$APP_NAME.xcodeproj/Info.plist")
+          mv build/$APP_NAME.ipa build/${APP_NAME}_v${VERSION}.${BUILD}.ipa
+
+      - name: Prepare .ipa for TrollStore
+        run: |
+          mkdir -p build/Payload
+          cp build/${APP_NAME}_v${VERSION}.${BUILD}.ipa build/Payload/$APP_NAME.app
+          cd build
+          zip -r ${APP_NAME}_v${VERSION}.${BUILD}.ipa Payload
+          cd ..
+
+      - name: Upload .ipa
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${APP_NAME}_Enterprise_TrollStore.ipa
+          path: build/${APP_NAME}_v${VERSION}.${BUILD}.ipa
