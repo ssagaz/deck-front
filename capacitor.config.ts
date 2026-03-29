@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.xl.MyXL.Giant-staging',
+  appId: 'deck.app',
   appName: 'Deck',
   webDir: 'dist/deckesfihas/browser'
 };

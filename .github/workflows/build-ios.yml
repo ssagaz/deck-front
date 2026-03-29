@@ -21,12 +21,12 @@ jobs:
       - name: Save certificate from secret
         run: |
           mkdir -p certs
-          echo "${{ secrets.P12_BASE64 }}" | tr -d '\r\n' | base64 --decode > certs/certificate.p12
+          echo -n "${{ secrets.P12_BASE64 }}" | base64 -D > certs/certificate.p12
 
       - name: Save provisioning profile from secret
         run: |
           mkdir -p profiles
-          echo "${{ secrets.MOBILEPROVISION_BASE64 }}" | tr -d '\r\n' | base64 --decode > profiles/MyXL-UniversalDist.mobileprovision
+          echo -n "${{ secrets.MOBILEPROVISION_BASE64 }}" | base64 -D > profiles/MyXL-UniversalDist.mobileprovision
 
       - name: Set up keychain
         run: |
@@ -35,6 +35,7 @@ jobs:
           security list-keychains -s build.keychain
           security default-keychain -s build.keychain
           security unlock-keychain -p "" build.keychain
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "" build.keychain
 
       - name: Install provisioning profile
         run: |
@@ -43,13 +44,14 @@ jobs:
 
       - name: Build and archive
         run: |
-          xcodebuild clean -project $APP_NAME.xcodeproj \
-            -scheme $APP_NAME \
+          cd ios/App
+          xcodebuild clean -workspace App.xcworkspace \
+            -scheme App \
             -configuration Release
           
           xcodebuild archive \
-            -project $APP_NAME.xcodeproj \
-            -scheme $APP_NAME \
+            -workspace App.xcworkspace \
+            -scheme App \
             -configuration Release \
             -archivePath ${{ github.workspace }}/build/$APP_NAME.xcarchive \
             DEVELOPMENT_TEAM=$TEAM_ID \
@@ -57,6 +59,7 @@ jobs:
 
       - name: Export .ipa
         run: |
+          cd ios/App
           xcodebuild -exportArchive \
             -archivePath ${{ github.workspace }}/build/$APP_NAME.xcarchive \
             -exportPath ${{ github.workspace }}/build \
@@ -64,8 +67,8 @@ jobs:
 
       - name: Rename .ipa with version
         run: |
-          VERSION=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" "$APP_NAME.xcodeproj/Info.plist")
-          BUILD=$(/usr/libexec/PlistBuddy -c "Print CFBundleVersion" "$APP_NAME.xcodeproj/Info.plist")
+          VERSION=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" "ios/App/App/Info.plist")
+          BUILD=$(/usr/libexec/PlistBuddy -c "Print CFBundleVersion" "ios/App/App/Info.plist")
           mv build/$APP_NAME.ipa build/${APP_NAME}_v${VERSION}.${BUILD}.ipa
 
       - name: Prepare .ipa for TrollStore
