@@ -2,9 +2,9 @@ name: Build iOS Unsigned IPA
 
 on:
   push:
-    branches: [ "master" ]
+    branches: ["master"]
   pull_request:
-    branches: [ "master" ]
+    branches: ["master"]
   workflow_dispatch:
 
 jobs:
@@ -12,7 +12,7 @@ jobs:
     runs-on: macos-latest
 
     steps:
-    - name: Checkout code
+    - name: Checkout repo
       uses: actions/checkout@v4
 
     - name: Setup Node.js
@@ -34,7 +34,7 @@ jobs:
       run: |
         pod install --repo-update
 
-    - name: Build unsigned app
+    - name: Build unsigned .app
       working-directory: ios/App
       run: |
         xcodebuild clean build \
@@ -42,11 +42,11 @@ jobs:
           -scheme App \
           -configuration Release \
           -sdk iphoneos \
+          CODE_SIGNING_ALLOWED=NO \
           CODE_SIGNING_REQUIRED=NO \
-          CODE_SIGN_IDENTITY="" \
-          CODE_SIGNING_ALLOWED=NO
+          CODE_SIGN_IDENTITY=""
 
-    - name: Create IPA
+    - name: Package IPA
       run: |
         mkdir -p unsigned/Payload
         cp -R ios/App/build/Release-iphoneos/App.app unsigned/Payload/
