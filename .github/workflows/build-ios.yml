@@ -1,60 +1,42 @@
-name: Build iOS Unsigned IPA
+name: Build iOS via Appflow
 
 on:
   push:
     branches: ["master"]
-  pull_request:
-    branches: ["master"]
   workflow_dispatch:
 
 jobs:
-  build_ios_unsigned:
-    runs-on: macos-latest
+  appflow_ios_build:
+    runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "18"
+    - name: Install Appflow CLI
+      run: |
+        curl -fsSL https://ionic.io/get-appflow-cli | bash
 
-      - name: Install dependencies
-        run: npm ci
+    - name: Appflow iOS build
+      run: |
+        export IONIC_TOKEN=${{ secrets.IONIC_TOKEN }}
+        appflow build ios development \
+          --app-id ${{ secrets.APPFLOW_APP_ID }} \
+          --commit=$(git rev-parse HEAD) \
+          --ipa \
+          --ipa-name="appflow_build_${{ github.run_number }}.ipa"
 
-      - name: Build web assets
-        run: npm run build
+    - name: Download build artifact
+      run: |
+        export IONIC_TOKEN=${{ secrets.IONIC_TOKEN }}
+        appflow build download-artifact \
+          --app-id ${{ secrets.APPFLOW_APP_ID }} \
+          --build-id $(appflow build list-builds --app-id ${{ secrets.APPFLOW_APP_ID }} --json | jq -r '.[0].buildId') \
+          --artifact=IPA \
+          --output ./appflow.ipa
 
-      - name: Capacitor sync iOS
-        run: npx cap sync ios
-
-      - name: Install CocoaPods
-        working-directory: ios/App
-        run: |
-          pod install --repo-update
-
-      - name: Build unsigned .app
-        working-directory: ios/App
-        run: |
-          xcodebuild clean build \
-            -workspace App.xcworkspace \
-            -scheme App \
-            -configuration Release \
-            -sdk iphoneos \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGN_IDENTITY=""
-
-      - name: Package IPA manually
-        run: |
-          mkdir -p unsigned/Payload
-          cp -R ios/App/build/Release-iphoneos/App.app unsigned/Payload/
-          cd unsigned
-          zip -r App.ipa Payload
-
-      - name: Upload unsigned IPA
-        uses: actions/upload-artifact@v4
-        with:
-          name: ios-unsigned-ipa
-          path: unsigned/App.ipa
+    - name: Upload IPA
+      uses: actions/upload-artifact@v4
+      with:
+        name: Appflow IPA
+        path: ./appflow.ipa
