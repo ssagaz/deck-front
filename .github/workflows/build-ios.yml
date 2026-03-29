@@ -2,7 +2,7 @@ name: Build iOS Enterprise App for TrollStore
 
 on:
   push:
-    branches: [ main ]
+    branches: [ master ]
   workflow_dispatch:
 
 jobs:
